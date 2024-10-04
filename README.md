@@ -13,6 +13,9 @@
 ## Points of Interest
 
 - [The demo app source code](src/dif-workshop.ts)
+- [DIF workshop recording](https://us02web.zoom.us/rec/play/8dvcyIxCuCQTtM9kBhc3OW_xtss1wKIgxVVI1oMKz0DPHboBxoRaXEFg727wGeEucYgyttXb-E_JXrSs.upTtHtss3RZMzXVK). Demo presentation starts at `00:33:35`
+- [Truvity's DIF Hackathon Discord channel](https://discord.com/channels/1157618771645698068/1286835814948671550)
+- [Documentation](https://docs.truvity.cloud/sdk)
 
 ## Prerequisites
 
