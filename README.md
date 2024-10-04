@@ -4,9 +4,9 @@
 * [DIF Hackathon 2024 Demo](#dif-hackathon-2024-demo)
   * [Points of Interest](#points-of-interest)
   * [Prerequisites](#prerequisites)
+    * [API Keys](#api-keys)
     * [Development Environment](#development-environment)
     * [Application Dependencies](#application-dependencies)
-    * [API Keys](#api-keys)
   * [How to Run](#how-to-run)
 <!-- TOC -->
 
@@ -18,6 +18,34 @@
 - [Documentation](https://docs.truvity.cloud/sdk)
 
 ## Prerequisites
+
+### API Keys
+
+To run the demo application, you'll need two API keys from different Truvity accounts.
+
+Register new accounts at https://signup.truvity.cloud/dif-hackathon-2024.
+
+Learn how to create a new API key [here](https://docs.truvity.cloud/overview/security/create-api-keys).
+
+Once you've obtained two API keys, please fill in their values in `devbox.json`, replacing the existing `<API_KEY_X>` placeholders
+
+```diff
+diff --git a/devbox.json b/devbox.json
+index 1c06ae6..1ddbad9 100644
+--- a/devbox.json
++++ b/devbox.json
+@@ -6,7 +6,7 @@
+   ],
+   "env": {
+     "DEVBOX_COREPACK_ENABLED": "true",
+-    "TIM_API_KEY": "<API_KEY_1>",
+-    "AIRLINE_API_KEY": "<API_KEY_2>"
++    "TIM_API_KEY": "PFgto...",
++    "AIRLINE_API_KEY": "ZBZ3b..."
+   }
+ }
+
+```
 
 ### Development Environment
 
@@ -34,14 +62,6 @@ After setting up the [development environment](#development-environment), instal
 ```shell
 yarn install
 ```
-
-### API Keys
-
-To run the demo application, you'll need two API keys from different Truvity accounts.
-
-Register new accounts at https://signup.truvity.cloud/dif-hackathon-2024.
-
-Learn how to create a new API key [here](https://docs.truvity.cloud/overview/security/create-api-keys).
 
 ## How to Run
 
