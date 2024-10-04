@@ -5,16 +5,8 @@
     "yarn-berry@4.3.1"
   ],
   "env": {
-    "DEVBOX_COREPACK_ENABLED": "true"
-  },
-  "shell": {
-    "init_hook": [
-      "echo 'Welcome to devbox!' > /dev/null"
-    ],
-    "scripts": {
-      "test": [
-        "echo \"Error: no test specified\" && exit 1"
-      ]
-    }
+    "DEVBOX_COREPACK_ENABLED": "true",
+    "TIM_API_KEY": "<API_KEY_1>",
+    "AIRLINE_API_KEY": "<API_KEY_2>"
   }
 }

@@ -3,6 +3,14 @@
   "packageManager": "yarn@4.3.1",
   "private": true,
   "type": "module",
+  "scripts": {
+    "format": "prettier . --cache --write --log-level warn --ignore-path .gitignore --ignore-path .prettierignore",
+    "typecheck": "tsc --noEmit",
+    "start": "node --loader ts-node/esm src/dif-workshop.ts"
+  },
+  "dependencies": {
+    "@truvity/sdk": "^0.28.2"
+  },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
     "@types/node": "~20.10",
