@@ -22,7 +22,8 @@ node_modules
 # Documentation here: https://yarnpkg.com/features/zero-installs
 #!.yarn/cache
 .pnp.*
-
+devbox.json
+devbox*
 
 # TypeScript cache
 *.tsbuildinfo
