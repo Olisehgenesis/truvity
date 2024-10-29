@@ -6,7 +6,8 @@
   "scripts": {
     "format": "prettier . --cache --write --log-level warn --ignore-path .gitignore --ignore-path .prettierignore",
     "typecheck": "tsc --noEmit",
-    "start": "node --loader ts-node/esm src/dif-workshop.ts"
+    "start": "node --loader ts-node/esm src/dif-workshop.ts",
+    "dev" :  "node --loader ts-node/esm src/index.ts"
   },
   "dependencies": {
     "@truvity/sdk": "^0.28.2"
