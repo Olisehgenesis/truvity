@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Compliance Officer Panel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .requests-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .requests-table th,
+        .requests-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .requests-table th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-pending { background: #fff3dc; color: #996b00; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .button-view {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .button-approve {
+            background: #059669;
+            color: white;
+            margin-right: 8px;
+        }
+
+        .button-reject {
+            background: #dc2626;
+            color: white;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .document-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .document-item {
+            padding: 16px;
+            border-radius: 4px;
+            background: #f8f8f8;
+        }
+
+        .document-item h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bank Compliance Officer Panel</h1>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search requests...">
+        </div>
+
+        <div id="alertBox" class="alert alert-error"></div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Verification Requests</h2>
+                <div id="requestsLoading" class="loading">Loading requests...</div>
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th>Applicant</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Document Viewer</h2>
+                <div id="documentViewer">
+                    <div id="documentLoading" class="loading">Select a request to view details</div>
+                    <div id="documentContent" style="display: none;">
+                        <div class="document-status">
+                            <div class="document-item">
+                                <h3>Registration</h3>
+                                <span id="registrationStatus"></span>
+                            </div>
+                            <div class="document-item">
+                                <h3>Employment</h3>
+                                <span id="employmentStatus"></span>
+                            </div>
+                            <div class="document-item">
+                                <h3>Identity</h3>
+                                <span id="identityStatus"></span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button id="approveButton" class="button button-approve">Approve</button>
+                            <button id="rejectButton" class="button button-reject">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentRequest = null;
+
+        // Utility functions
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.style.display = 'block';
+            alertBox.className = `alert alert-${type}`;
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        }
+
+        function createStatusBadge(status) {
+            return `<span class="status-badge status-${status.toLowerCase()}">${status}</span>`;
+        }
+
+        // API functions
+        async function fetchRequests(search = '') {
+            try {
+                const response = await fetch(`/api/bank/verification-requests?search=${encodeURIComponent(search)}`);
+                if (!response.ok) throw new Error('Failed to fetch requests');
+                const requests = await response.json();
+                displayRequests(requests);
+            } catch (error) {
+                showAlert('Failed to load verification requests');
+            }
+        }
+
+        async function fetchDocumentDetails(requestId) {
+            try {
+                document.getElementById('documentLoading').style.display = 'block';
+                document.getElementById('documentContent').style.display = 'none';
+
+                const response = await fetch(`/api/bank/documents/${requestId}`);
+                if (!response.ok) throw new Error('Failed to fetch document details');
+                
+                const document = await response.json();
+                displayDocumentDetails(document);
+            } catch (error) {
+                showAlert('Failed to load document details');
+            }
+        }
+
+        async function handleVerification(requestId, approved) {
+            try {
+                const response = await fetch('/api/bank/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requestId,
+                        approved,
+                        reviewerId: 'COMPLIANCE-OFFICER-001',
+                        comments: approved ? 'Approved by compliance officer' : 'Rejected by compliance officer'
+                    })
+                });
+
+                if (!response.ok) throw new Error('Verification failed');
+
+                // Refresh the requests list
+                fetchRequests();
+                document.getElementById('documentContent').style.display = 'none';
+                document.getElementById('documentLoading').style.display = 'block';
+                document.getElementById('documentLoading').textContent = 'Select a request to view details';
+            } catch (error) {
+                showAlert('Failed to process verification');
+            }
+        }
+
+        // Display functions
+        function displayRequests(requests) {
+            const tbody = document.getElementById('requestsTableBody');
+            document.getElementById('requestsLoading').style.display = 'none';
+            
+            tbody.innerHTML = requests.map(request => `
+                <tr>
+                    <td>${request.applicantName}</td>
+                    <td>${createStatusBadge(request.status)}</td>
+                    <td>${formatDate(request.submissionDate)}</td>
+                    <td>
+                        <button 
+                            class="button button-view" 
+                            onclick="fetchDocumentDetails('${request.id}')"
+                            ${request.status !== 'PENDING' ? 'disabled' : ''}
+                        >
+                            View
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function displayDocumentDetails(document) {
+            currentRequest = document;
+            document.getElementById('documentLoading').style.display = 'none';
+            document.getElementById('documentContent').style.display = 'block';
+
+            // Update status indicators
+            document.getElementById('registrationStatus').innerHTML = document.proofOfRegistration
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            document.getElementById('employmentStatus').innerHTML = document.employmentContract
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            document.getElementById('identityStatus').innerHTML = document.identity
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            // Update approve button state
+            document.getElementById('approveButton').disabled = 
+                !(document.proofOfRegistration && document.employmentContract && document.identity);
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            fetchRequests(e.target.value);
+        });
+
+        document.getElementById('approveButton').addEventListener('click', () => {
+            if (currentRequest) {
+                handleVerification(currentRequest.id, true);
+            }
+        });
+
+        document.getElementById('rejectButton').addEventListener('click', () => {
+            if (currentRequest) {
+                handleVerification(currentRequest.id, false);
+            }
+        });
+
+        // Initial load
+        fetchRequests();
+    </script>
+</body>
+</html>
