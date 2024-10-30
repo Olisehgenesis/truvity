@@ -6,7 +6,13 @@
         "experimentalDecorators": true,
         "allowImportingTsExtensions": true,
         "noEmit": true,
-
+        "target": "ES2020",
+        "module": "NodeNext",
+        "esModuleInterop": true,
+        "strict": true,
+        "outDir": "./dist",
+        "rootDir": "./src"
     },
+    "include": ["src/**/*"],
     "exclude": ["node_modules"]
 }

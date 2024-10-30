@@ -954,6 +954,8 @@ async function runFullJourney() {
 
 // Export everything needed for external use
 export {
+    //types
+    LinkedCredential,
     //cleints
     mikoClient,
     employerClient,
