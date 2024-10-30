@@ -265,17 +265,17 @@ class Logger {
 
 // Initialize clients for different parties
 const mikoClient = new TruvityClient({
-    apiKey: process.env.WALLET_API_KEY,
+    apiKey: process.env.MIKO_API_KEY,
     environment: 'https://api.truvity.cloud'
 });
 
 const employerClient = new TruvityClient({
-    apiKey: process.env.TIM_API_KEY,
+    apiKey: process.env.EMPLOYER_API_KEY,
     environment: 'https://api.truvity.cloud'
 });
 
 const municipalityClient = new TruvityClient({
-    apiKey: process.env.AIRLINE_API_KEY,
+    apiKey: process.env.MUNICPALITY_API_KEY,
     environment: 'https://api.truvity.cloud'
 });
 
