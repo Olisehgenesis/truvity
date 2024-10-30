@@ -281,6 +281,8 @@ class TodoListManager {
 }
 
 // Example usage with logging
+// Only showing the relevant changes for brevity...
+
 async function initiateMikosJourney() {
     try {
         Logger.log('JOURNEY_START', 'Initiating Miko\'s journey');
@@ -315,17 +317,34 @@ async function initiateMikosJourney() {
             "pending"
         );
 
-        // Example: Issue and share the contract
-        const employerDid = "did:example:employer";
-        const contract = await todoList.issueAndShare(contractDraft, key.id, employerDid);
+        // Issue the credential without sharing
+        try {
+            Logger.log('ISSUE_START', 'Issuing credential', {
+                draftId: contractDraft.id,
+                keyId: key.id
+            });
 
-        // Update status after successful issuance
-        await contractDraft.update({
-            labels: {
-                status: "completed"
-            }
-        });
-        Logger.log('CONTRACT_STATUS', 'Contract status updated to completed');
+            const credential = await contractDraft.issue(key.id);
+            Logger.log('ISSUE_COMPLETE', 'Credential issued successfully', {
+                credentialId: credential.id
+            });
+
+            // Update status after successful issuance
+            await contractDraft.update({
+                labels: {
+                    status: "completed"
+                }
+            });
+            Logger.log('CONTRACT_STATUS', 'Contract status updated to completed');
+
+            // Optional: Store the credential ID for future reference
+            Logger.log('CREDENTIAL_STORED', 'Employment contract credential stored', {
+                credentialId: credential.id
+            });
+        } catch (error) {
+            Logger.error('ISSUE_ERROR', 'Failed to issue credential', error);
+            throw error;
+        }
 
         // Get next task
         const nextTask = await todoList.getNextTask();
