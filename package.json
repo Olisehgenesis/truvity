@@ -6,8 +6,8 @@
   "scripts": {
     "format": "prettier . --cache --write --log-level warn --ignore-path .gitignore --ignore-path .prettierignore",
     "typecheck": "tsc --noEmit",
-    "test-backend" :  "node --loader ts-node/esm src/index.ts",
-    "frontend" : "node "
+    "miko" :  "node --loader ts-node/esm src/miko.ts",
+    "bank" : "node --loader ts-node/esm src/bank.ts "
   },
   "dependencies": {
     "@truvity/sdk": "^0.28.2"

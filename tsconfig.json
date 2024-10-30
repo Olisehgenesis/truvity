@@ -3,7 +3,10 @@
     "compilerOptions": {
         "skipLibCheck": false,
         "emitDecoratorMetadata": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+
     },
     "exclude": ["node_modules"]
 }
