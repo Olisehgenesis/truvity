@@ -954,6 +954,12 @@ async function runFullJourney() {
 
 // Export everything needed for external use
 export {
+    //cleints
+    mikoClient,
+    employerClient,
+    bankClient,
+    municipalityClient,
+    
     // Types
     EmploymentContract,
     EmploymentContractResponse,
