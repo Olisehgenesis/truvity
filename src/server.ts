@@ -4,11 +4,11 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { ComplianceOfficerPanel } from './compliance-officer-panel.js';
 import { Logger } from './miko-journey.js';
-import { 
+import {
     LinkedCredential,
     ProofOfIdentity,
     EmploymentContract,
-    MunicipalityRegistrationResponse 
+    MunicipalityRegistrationResponse
 } from './miko-journey.js';
 
 // ES Module equivalent for __dirname
@@ -42,16 +42,6 @@ app.get('/api/bank/verification-requests', async (req, res) => {
             status: req.query.status?.toString()
         });
 
-        // Log the first 10 raw requests to understand what we're getting
-        Logger.log('BANK_DEBUG', 'First 10 raw requests:', 
-            requests.slice(0, 10).map(req => ({
-                id: req.id,
-                type: req.data?.type,
-                // namespace: req.data?.namespace,
-                linkedCredentials: req.data?.linkedCredentials
-            }))
-        );
-
         // Filter for only bank-related documents
         const bankRequests = requests.filter(request => {
             const types = Array.isArray(request.data?.type) ? request.data.type : [request.data?.type];
@@ -62,40 +52,12 @@ app.get('/api/bank/verification-requests', async (req, res) => {
             );
         });
 
-        Logger.log('BANK_FILTERED', `Filtered to ${bankRequests.length} bank requests out of ${requests.length} total requests`);
-
-        const uiRequests = await Promise.all(bankRequests.map(async (request) => {
-            try {
-                // First map to a VC
-                const mappedRequest = panel.mapVerificationRequest(request);
-                const claims = await mappedRequest.getClaims();
-
-                let identityInfo = null;
-                if (claims.identity) {
-                    const identityVC = await claims.identity.dereference();
-                    identityInfo = await identityVC.getClaims();
-                }
-
-                return {
-                    id: request.id,
-                    applicantName: identityInfo?.fullName || 'Unknown',
-                    status: claims.status || 'PENDING',
-                    submissionDate: claims.submissionDate || request.data.validFrom || new Date().toISOString(),
-                    verificationId: request.id,
-                    documents: {
-                        hasIdentity: !!claims.identity,
-                        hasEmployment: !!claims.employment,
-                        hasRegistration: !!claims.registration
-                    }
-                };
-            } catch (error) {
-                Logger.error('BANK_REQUEST_MAPPING_ERROR', `Error mapping request ${request.id}`, error);
-                return null;
-            }
-        }));
+        const uiRequests = await Promise.all(bankRequests.map(request => 
+            panel.mapVerificationRequest(request)
+        ));
 
         const validRequests = uiRequests.filter((request): request is NonNullable<typeof request> => request !== null);
-        Logger.log('BANK_SEARCH_COMPLETE', `Successfully mapped ${validRequests.length} bank verification requests`);
+        
         res.json(validRequests);
     } catch (error) {
         Logger.error('API_ERROR', 'Failed to fetch verification requests', error);
@@ -108,15 +70,15 @@ app.get('/api/bank/documents/:id', async (req, res) => {
         // Get the raw credential first
         const requests = await panel.searchVerificationRequests({});
         const request = requests.find(r => r.id === req.params.id);
-        
+
         if (!request) {
             return res.status(404).json({ error: 'Request not found' });
         }
 
         // Map it to a VC
         const mappedRequest = panel.mapVerificationRequest(request);
-        const claims = await mappedRequest.getClaims();
-        
+        const claims = await (await mappedRequest).getClaims();
+
         let identityInfo = null;
         let employmentInfo = null;
         let registrationInfo = null;
@@ -178,9 +140,9 @@ app.get('/api/bank/documents/:id', async (req, res) => {
 app.post('/api/bank/verify', async (req, res) => {
     try {
         const { requestId, approved, comments, reviewerId } = req.body;
-        
+
         const request = await panel.mapVerificationRequest(requestId);
-        
+
         if (approved) {
             const result = await panel.approveVerification(
                 request,

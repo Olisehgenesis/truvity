@@ -1,9 +1,10 @@
 import { TruvityClient, LinkedCredential, VcContext, VcClaim, VcNotEmptyClaim, VcLinkedCredentialClaim } from '@truvity/sdk';
-import { 
+
+import {
     Logger,
     MunicipalityRegistrationResponse,
     EmploymentContractResponse,
-    ProofOfIdentity 
+    ProofOfIdentity
 } from './miko-journey.ts';
 
 // --- Document Schemas ---
@@ -134,21 +135,34 @@ export class ComplianceOfficerPanel {
     }) {
         try {
             Logger.log('BANK_SEARCH_START', 'Starting verification request search', searchParams);
-    
-            // Create base filter for bank verification requests only
+
+            // Create base filter for both direct bank requests and related credentials
             const filter: any[] = [{
                 data: {
                     type: {
                         operator: 'IN',
                         values: [
-                            this.verificationDecorator.getCredentialTerm(),
-                            'BankVerificationRequest',  // Add specific type
-                            'urn:dif:hackathon/vocab/banking#BankVerificationRequest'  // Add fully qualified type
+                            'BankVerificationRequest',
+                            'BankAccountOpeningCredential',
+                            'BankAccountOpeningResponseCredential',
+                            'BankAccountApplicationCredential',
+                            'urn:dif:hackathon/vocab/banking#BankVerificationRequest',
+                            this.verificationDecorator.getCredentialTerm()
+                        ]
+                    }
+                }
+            }, {
+                data: {
+                    namespace: {
+                        operator: 'IN',
+                        values: [
+                            'urn:dif:hackathon/vocab/banking',
+                            'urn:dif:hackathon/vocab/identity',
+                            'urn:dif:hackathon/vocab/municipality'
                         ]
                     }
                 }
             }];
-    
             // Add namespace filter to ensure we only get banking documents
             filter.push({
                 data: {
@@ -158,7 +172,7 @@ export class ComplianceOfficerPanel {
                     }
                 }
             });
-    
+
             if (searchParams?.applicantName) {
                 filter.push({
                     data: {
@@ -171,7 +185,7 @@ export class ComplianceOfficerPanel {
                     }
                 });
             }
-    
+
             if (searchParams?.status) {
                 filter.push({
                     data: {
@@ -184,14 +198,14 @@ export class ComplianceOfficerPanel {
                     }
                 });
             }
-    
+
             Logger.log('BANK_SEARCH_FILTER', 'Applying search filters', filter);
-    
+
             const results = await this.bankClient.credentials.credentialSearch({
                 filter,
                 sort: [{ field: 'DATA_VALID_FROM', order: 'DESC' }]
             });
-    
+
             Logger.log('BANK_SEARCH_COMPLETE', `Found ${results.items.length} bank verification requests`);
             return results.items;
         } catch (error) {
@@ -200,23 +214,115 @@ export class ComplianceOfficerPanel {
         }
     }
 
-    public mapVerificationRequest(request: any) {
+    public async mapVerificationRequest(request: any) {
         try {
-            Logger.log('BANK_MAP_START', 'Mapping verification request', { requestId: request.id });
-            const mappedRequest = this.verificationDecorator.map(request);
-            Logger.log('BANK_MAP_SUCCESS', 'Successfully mapped verification request');
-            return mappedRequest;
+            Logger.log('BANK_MAP_START', 'Mapping verification request', { 
+                requestId: request.id,
+                requestType: request.data?.type,
+                decoratorTerm: this.verificationDecorator.getCredentialTerm()
+            });
+    
+            // Extract linked credentials
+            const linkedCreds = Array.isArray(request.data?.linkedCredentials) 
+                ? request.data.linkedCredentials 
+                : [];
+    
+            // Function to get the credential ID from a linked credential string
+            const getCredentialId = (linkedCred: string) => {
+                const { linkedId } = LinkedCredential.normalizeLinkedCredentialId(linkedCred);
+                return linkedId;
+            };
+    
+            // Function to find credential by type in linked credentials
+            const findCredentialByType = async (type: string) => {
+                const cred = linkedCreds.find((cred: string) => 
+                    cred.toLowerCase().includes(type.toLowerCase())
+                );
+                if (!cred) return null;
+                
+                try {
+                    // Use credentialLatest instead of credentialGet
+                    const credentialId = getCredentialId(cred);
+                    const result = await this.bankClient.credentials.credentialLatest(credentialId);
+                    return result;
+                } catch (e) {
+                    Logger.error('BANK_CREDENTIAL_ERROR', `Failed to fetch credential: ${cred}`, e);
+                    return null;
+                }
+            };
+    
+            // Get applicant name from linked identity document if possible
+            let applicantName = 'Unknown';
+            const identityDoc = await findCredentialByType('Identity') || 
+                               await findCredentialByType('Birth');
+            
+            if (identityDoc && (identityDoc.data as any)?.claims?.fullName) {
+                applicantName = (identityDoc.data as any).claims.fullName;
+            }
+    
+            // Get registration and employment credentials
+            const registrationDoc = await findCredentialByType('MunicipalityRegistration');
+            const employmentDoc = await findCredentialByType('Employment');
+    
+            // Construct mapped request with all required fields
+            const mappedRequest = {
+                id: request.id,
+                data: {
+                    type: ['VerifiableCredential', 'BankVerificationRequest'],
+                    namespace: 'urn:dif:hackathon/vocab/banking',
+                    claims: {
+                        applicantName,
+                        verificationId: request.id,
+                        submissionDate: request.data?.validFrom || new Date().toISOString(),
+                        
+                        // Create proper LinkedCredential objects
+                        proofOfRegistration: registrationDoc ? {
+                            id: registrationDoc.id,
+                            type: 'LinkedCredential'
+                        } : undefined,
+                        employmentContract: employmentDoc ? {
+                            id: employmentDoc.id,
+                            type: 'LinkedCredential'
+                        } : undefined,
+                        identity: identityDoc ? {
+                            id: identityDoc.id,
+                            type: 'LinkedCredential'
+                        } : undefined
+                    },
+                    validFrom: request.data?.validFrom,
+                    validUntil: request.data?.validUntil,
+                    issuer: request.data?.issuer,
+                    issuanceDate: request.data?.issuanceDate
+                }
+            };
+    
+            Logger.log('BANK_MAP_DEBUG', 'Constructed mapped request', {
+                id: mappedRequest.id,
+                claims: mappedRequest.data.claims,
+                linkedDocs: {
+                    registration: !!registrationDoc,
+                    employment: !!employmentDoc,
+                    identity: !!identityDoc
+                }
+            });
+    
+            // Validate required fields before mapping
+            if (!registrationDoc || !employmentDoc || !identityDoc) {
+                throw new Error('Missing required linked credentials');
+            }
+    
+            // Now map this constructed request
+            return this.verificationDecorator.map(mappedRequest);
         } catch (error) {
             Logger.error('BANK_MAP_ERROR', 'Failed to map verification request', error);
             throw new Error(`Mapping error: ${error}`);
         }
     }
-
     async verifyDocumentLinks(verificationVc: any) {
         try {
             Logger.log('BANK_VERIFY_START', 'Starting document verification');
             const claims = await verificationVc.getClaims();
-            
+
             // Verify all required documents are present and linked
             const proofOfRegistration = await claims.proofOfRegistration?.dereference();
             const employmentContract = await claims.employmentContract?.dereference();
@@ -238,7 +344,7 @@ export class ComplianceOfficerPanel {
             // Verify documents are valid and not expired
             const currentDate = new Date();
             const employmentStartDate = new Date(employmentClaims.startDate);
-            
+
             if (employmentStartDate > currentDate) {
                 Logger.log('BANK_VERIFY_INVALID', 'Employment contract not yet valid');
                 return {
@@ -266,8 +372,8 @@ export class ComplianceOfficerPanel {
     }
 
     async approveVerification(
-        verificationVc: any, 
-        reviewerId: string, 
+        verificationVc: any,
+        reviewerId: string,
         comments?: string
     ) {
         try {
@@ -330,8 +436,8 @@ export class ComplianceOfficerPanel {
     }
 
     async rejectVerification(
-        verificationVc: any, 
-        reviewerId: string, 
+        verificationVc: any,
+        reviewerId: string,
         comments: string
     ) {
         try {
@@ -379,7 +485,7 @@ export class ComplianceOfficerPanel {
 export async function main() {
     try {
         Logger.log('BANK_START', 'Starting Bank Compliance Application');
-        
+
         // Verify environment variables
         const requiredEnvVars = ['BANK_COMPLIANCE_API_KEY'];
         for (const envVar of requiredEnvVars) {
@@ -407,7 +513,7 @@ export async function main() {
         for (const request of pendingRequests) {
             try {
                 Logger.log('BANK_PROCESS_START', `Processing request: ${request.id}`);
-                
+
                 const verificationVc = panel.mapVerificationRequest(request);
                 const verificationResult = await panel.verifyDocumentLinks(verificationVc);
 
