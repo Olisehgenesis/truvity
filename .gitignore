@@ -25,6 +25,7 @@ node_modules
 devbox.json
 devbox*
 devbox.*
-
+.env*
+.env.*
 # TypeScript cache
 *.tsbuildinfo
