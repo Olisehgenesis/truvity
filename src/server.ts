@@ -1,10 +1,9 @@
+
 import express from 'express';
 import { ComplianceOfficerPanel, Logger } from './compliance-officer-panel.ts';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// server.ts
 
-// ES Module equivalent for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,6 +22,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Search endpoint
 app.get('/api/verifications', async (req, res) => {
     try {
         const { search, status } = req.query;
@@ -30,48 +30,156 @@ app.get('/api/verifications', async (req, res) => {
             applicantName: search?.toString(),
             status: status?.toString()
         });
-        res.json(requests);
+
+        // Ensure requests is always an array
+        const requestsArray = Array.isArray(requests) ? requests : [];
+
+        // Create summary from the requests
+        const summary = {
+            total: requestsArray.length,
+            byStatus: {
+                pending: requestsArray.filter(r => r?.status === 'PENDING').length,
+                approved: requestsArray.filter(r => r?.status === 'APPROVED').length,
+                rejected: requestsArray.filter(r => r?.status === 'REJECTED').length
+            },
+            withLinkedDocs: requestsArray.filter(r => 
+                r?.linkedDocuments?.hasIdentity && 
+                r?.linkedDocuments?.hasEmployment && 
+                r?.linkedDocuments?.hasRegistration
+            ).length
+        };
+
+        // Format the requests for the frontend
+        const formattedRequests = requestsArray.map(request => ({
+            id: request?.id,
+            applicantName: request?.applicantName || 'Unknown',
+            status: request?.status || 'PENDING',
+            submissionDate: request?.submissionDate || new Date().toISOString(),
+            linkedDocuments: {
+                hasIdentity: !!request?.linkedDocuments?.hasIdentity,
+                hasEmployment: !!request?.linkedDocuments?.hasEmployment,
+                hasRegistration: !!request?.linkedDocuments?.hasRegistration
+            }
+        }));
+
+        res.json({
+            requests: formattedRequests,
+            summary
+        });
     } catch (error) {
         Logger.error('API_ERROR', 'Failed to fetch verification requests', error);
-        res.status(500).json({ error: 'Failed to fetch verification requests' });
+        res.status(500).json({ 
+            error: 'Failed to fetch verification requests',
+            details: error 
+        });
     }
 });
 
+// Add type definitions for better error handling
+interface VerificationRequest {
+    id: string;
+    applicantName?: string;
+    status?: string;
+    submissionDate?: string;
+    linkedDocuments?: {
+        hasIdentity?: boolean;
+        hasEmployment?: boolean;
+        hasRegistration?: boolean;
+    };
+}
+
+// Document details endpoint
 app.get('/api/verifications/:id', async (req, res) => {
     try {
         const verification = await panel.verifyDocumentLinks(req.params.id);
         if (!verification) {
             return res.status(404).json({ error: 'Verification request not found' });
         }
-        res.json(verification);
+
+        if (!verification.isValid) {
+            return res.json({
+                isValid: false,
+                error: verification.error,
+                missingDocuments: verification.missingDocuments
+            });
+        }
+
+        // Return the verification with documents
+        res.json({
+            isValid: true,
+            documents: verification.documents,
+            linkedDocuments: {
+                hasIdentity: !!verification.documents?.identity,
+                hasEmployment: !!verification.documents?.employment,
+                hasRegistration: !!verification.documents?.registration
+            }
+        });
     } catch (error) {
         Logger.error('API_ERROR', 'Failed to fetch verification details', error);
         res.status(500).json({ error: 'Failed to fetch verification details' });
     }
 });
 
+// Approval endpoint
 app.post('/api/verifications/:id/approve', async (req, res) => {
     try {
+        // First verify all documents are present
+        const verification = await panel.verifyDocumentLinks(req.params.id);
+        if (!verification.isValid) {
+            return res.status(400).json({
+                error: 'Cannot approve - missing required documents',
+                missingDocuments: verification.missingDocuments
+            });
+        }
+
         const result = await panel.approveVerification(
             req.params.id,
             req.body.reviewerId,
             req.body.comments
         );
-        res.json(result);
+
+        Logger.log('VERIFICATION_APPROVED', 'Verification approved successfully', {
+            verificationId: req.params.id,
+            reviewerId: req.body.reviewerId,
+            timestamp: new Date().toISOString()
+        });
+
+        res.json({
+            status: 'approved',
+            result
+        });
     } catch (error) {
         Logger.error('API_ERROR', 'Failed to approve verification', error);
         res.status(500).json({ error: 'Failed to approve verification' });
     }
 });
 
+// Rejection endpoint
 app.post('/api/verifications/:id/reject', async (req, res) => {
     try {
+        if (!req.body.comments) {
+            return res.status(400).json({
+                error: 'Rejection requires comments explaining the reason'
+            });
+        }
+
         const result = await panel.rejectVerification(
             req.params.id,
             req.body.reviewerId,
             req.body.comments
         );
-        res.json(result);
+
+        Logger.log('VERIFICATION_REJECTED', 'Verification rejected', {
+            verificationId: req.params.id,
+            reviewerId: req.body.reviewerId,
+            reason: req.body.comments,
+            timestamp: new Date().toISOString()
+        });
+
+        res.json({ 
+            status: 'rejected', 
+            result 
+        });
     } catch (error) {
         Logger.error('API_ERROR', 'Failed to reject verification', error);
         res.status(500).json({ error: 'Failed to reject verification' });
@@ -81,10 +189,13 @@ app.post('/api/verifications/:id/reject', async (req, res) => {
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
     Logger.error('SERVER_ERROR', 'Unhandled server error', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+        error: 'Internal server error',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Start server
 app.listen(PORT, () => {
-    Logger.log('SERVER_START', `Compliance Officer Panel server running on port ${PORT}`);
+    Logger.log('SERVER_START', `Bank Compliance Officer Panel server running on port ${PORT}`);
 });

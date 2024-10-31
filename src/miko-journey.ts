@@ -1,5 +1,4 @@
-import { TruvityClient, LinkedCredential, VcContext, VcClaim, VcNotEmptyClaim, VcLinkedCredentialClaim, VcLinkedFileClaim, LinkedFile } from '@truvity/sdk';
-import { error } from 'console';
+import { TruvityClient, LinkedCredential, VcContext, VcClaim, VcNotEmptyClaim, VcLinkedCredentialClaim } from '@truvity/sdk';
 
 // --- Document Schemas ---
 @VcContext({
@@ -21,10 +20,6 @@ class EmploymentContract {
 
     @VcNotEmptyClaim
     salary!: number;
-
-    @VcLinkedFileClaim
-    @VcNotEmptyClaim
-    contractDocument!: LinkedFile;
 }
 
 @VcContext({
@@ -45,7 +40,7 @@ class ProofOfFinancialStability {
 })
 class BirthCertificate {
     @VcNotEmptyClaim
-    fullName!: string;
+    employeeName!: string;
 
     @VcNotEmptyClaim
     dateOfBirth!: string;
@@ -56,6 +51,7 @@ class BirthCertificate {
     @VcNotEmptyClaim
     registrationNumber!: string;
 }
+
 @VcContext({
     name: 'EmploymentContractResponse',
     namespace: 'urn:dif:hackathon/vocab/employment'
@@ -78,7 +74,7 @@ class EmploymentContractResponse {
 })
 class ProofOfIdentity {
     @VcNotEmptyClaim
-    fullName!: string;
+    employeeName!: string;
 
     @VcNotEmptyClaim
     dateOfBirth!: string;
@@ -88,10 +84,6 @@ class ProofOfIdentity {
 
     @VcNotEmptyClaim
     documentNumber!: string;
-
-    @VcLinkedFileClaim
-    @VcNotEmptyClaim
-    identificationDocument!: LinkedFile;
 }
 
 @VcContext({
@@ -196,6 +188,12 @@ class BankAccountOpening {
 
     @VcNotEmptyClaim
     accountNumber!: string;
+
+    @VcNotEmptyClaim
+    employeeName!: string;
+
+    @VcNotEmptyClaim
+    submissionDate!: string;
 }
 
 @VcContext({
@@ -241,7 +239,7 @@ class RentalAgreement {
     propertyAddress!: string;
 }
 
-
+// Logger implementation
 class Logger {
     static log(category: string, message: string, data?: any) {
         const timestamp = new Date().toISOString();
@@ -260,27 +258,24 @@ class Logger {
     }
 }
 
-
-// ... (Logger class remains the same)
-
-// Initialize clients for different parties
+// Initialize clients
 const mikoClient = new TruvityClient({
-    apiKey: process.env.MIKO_API_KEY,
+    apiKey: process.env.MIKO_API_KEY || '',
     environment: 'https://api.truvity.cloud'
 });
 
 const employerClient = new TruvityClient({
-    apiKey: process.env.EMPLOYER_API_KEY,
+    apiKey: process.env.EMPLOYER_API_KEY || '',
     environment: 'https://api.truvity.cloud'
 });
 
 const municipalityClient = new TruvityClient({
-    apiKey: process.env.MUNICPALITY_API_KEY,
+    apiKey: process.env.MUNICPALITY_API_KEY || '',
     environment: 'https://api.truvity.cloud'
 });
 
 const bankClient = new TruvityClient({
-    apiKey: process.env.BANK_API_KEY,
+    apiKey: process.env.BANK_API_KEY || '',
     environment: 'https://api.truvity.cloud'
 });
 
@@ -405,6 +400,91 @@ async function handleEmploymentResponse() {
     }
 }
 
+async function initiateProofOfFinancialStability() {
+    try {
+        Logger.log('FINANCIAL_STABILITY_START', 'Initiating proof of financial stability');
+
+        const mikoKey = await mikoClient.keys.keyGenerate({
+            data: { type: 'ED25519' }
+        });
+
+        const financialStabilityDecorator = mikoClient.createVcDecorator(ProofOfFinancialStability);
+        const financialStabilityDraft = await financialStabilityDecorator.create({
+            claims: {
+                bankStatement: "Bank Statement.pdf",
+                balanceAmount: 10000
+            }
+        });
+
+        const financialStabilityVc = await financialStabilityDraft.issue(mikoKey.id);
+
+        Logger.log('FINANCIAL_STABILITY_CREATED', 'Created proof of financial stability');
+
+        return financialStabilityVc;
+    } catch (error) {
+        Logger.error('FINANCIAL_STABILITY_ERROR', 'Failed to create proof of financial stability', error);
+        throw error;
+    }
+}
+
+async function initiateBirthCertificate() {
+    try {
+        Logger.log('BIRTH_CERTIFICATE_START', 'Initiating birth certificate');
+
+        const mikoKey = await mikoClient.keys.keyGenerate({
+            data: { type: 'ED25519' }
+        });
+
+        const birthCertificateDecorator = mikoClient.createVcDecorator(BirthCertificate);
+        const birthCertificateDraft = await birthCertificateDecorator.create({
+            claims: {
+                employeeName: "Miko",
+                dateOfBirth: "1990-01-01",
+                placeOfBirth: "Country X",
+                registrationNumber: "BC12345"
+            }
+        });
+
+        const birthCertificateVc = await birthCertificateDraft.issue(mikoKey.id);
+
+        Logger.log('BIRTH_CERTIFICATE_CREATED', 'Created birth certificate');
+
+        return birthCertificateVc;
+    } catch (error) {
+        Logger.error('BIRTH_CERTIFICATE_ERROR', 'Failed to create birth certificate', error);
+        throw error;
+    }
+}
+
+async function initiateIdentityCredential() {
+    try {
+        Logger.log('IDENTITY_START', 'Creating identity credential');
+
+        const mikoKey = await mikoClient.keys.keyGenerate({
+            data: { type: 'ED25519' }
+        });
+
+        const identityDecorator = mikoClient.createVcDecorator(ProofOfIdentity);
+        const identityDraft = await identityDecorator.create({
+            claims: {
+                employeeName: "Miko",
+                dateOfBirth: "1990-01-01",
+                nationality: "Non-EU",
+                documentNumber: "ID123456"
+            }
+        });
+
+        const identityVc = await identityDraft.issue(mikoKey.id);
+
+        Logger.log('IDENTITY_CREATED', 'Created identity credential');
+
+        return identityVc;
+    } catch (error) {
+        Logger.error('IDENTITY_ERROR', 'Failed to create identity credential', error);
+        throw error;
+    }
+}
+
 async function initiateVisaApplication(employmentResponseVc: any, identityVc: any, financialStabilityVc: any) {
     try {
         Logger.log('VISA_APPLICATION_START', 'Initiating visa application');
@@ -490,7 +570,6 @@ async function handleVisaApplication() {
         throw error;
     }
 }
-
 async function checkVisaStatus() {
     try {
         Logger.log('CHECKING_VISA_STATUS', 'Checking visa application status');
@@ -559,6 +638,7 @@ async function initiateMunicipalityRegistration(identityVc: any, visaResponseVc:
         throw error;
     }
 }
+
 async function handleMunicipalityRegistration() {
     try {
         Logger.log('MUNICIPALITY_PROCESSING_START', 'Processing municipality registrations');
@@ -646,61 +726,6 @@ async function checkRegistrationStatus() {
         throw error;
     }
 }
-async function initiateProofOfFinancialStability() {
-    try {
-        Logger.log('FINANCIAL_STABILITY_START', 'Initiating proof of financial stability');
-
-        const mikoKey = await mikoClient.keys.keyGenerate({
-            data: { type: 'ED25519' }
-        });
-
-        const financialStabilityDecorator = mikoClient.createVcDecorator(ProofOfFinancialStability);
-        const financialStabilityDraft = await financialStabilityDecorator.create({
-            claims: {
-                bankStatement: "Bank Statement.pdf",
-                balanceAmount: 10000
-            }
-        });
-
-        const financialStabilityVc = await financialStabilityDraft.issue(mikoKey.id);
-
-        Logger.log('FINANCIAL_STABILITY_CREATED', 'Created proof of financial stability');
-
-        return financialStabilityVc;
-    } catch (error) {
-        Logger.error('FINANCIAL_STABILITY_ERROR', 'Failed to create proof of financial stability', error);
-        throw error;
-    }
-}
-
-async function initiateBirthCertificate() {
-    try {
-        Logger.log('BIRTH_CERTIFICATE_START', 'Initiating birth certificate');
-
-        const mikoKey = await mikoClient.keys.keyGenerate({
-            data: { type: 'ED25519' }
-        });
-
-        const birthCertificateDecorator = mikoClient.createVcDecorator(BirthCertificate);
-        const birthCertificateDraft = await birthCertificateDecorator.create({
-            claims: {
-                fullName: "Miko",
-                dateOfBirth: "1990-01-01",
-                placeOfBirth: "Country X",
-                registrationNumber: "BC12345"
-            }
-        });
-
-        const birthCertificateVc = await birthCertificateDraft.issue(mikoKey.id);
-
-        Logger.log('BIRTH_CERTIFICATE_CREATED', 'Created birth certificate');
-
-        return birthCertificateVc;
-    } catch (error) {
-        Logger.error('BIRTH_CERTIFICATE_ERROR', 'Failed to create birth certificate', error);
-        throw error;
-    }
-}
 
 async function initiateBankAccountOpening(identityVc: any, employmentResponseVc: any, registrationResponseVc: any) {
     try {
@@ -713,13 +738,17 @@ async function initiateBankAccountOpening(identityVc: any, employmentResponseVc:
             data: { type: 'ED25519' }
         });
 
+        const identityClaims = await identityVc.getClaims();
+
         const bankAccountOpeningDecorator = mikoClient.createVcDecorator(BankAccountOpening);
         const bankAccountOpeningDraft = await bankAccountOpeningDecorator.create({
             claims: {
                 identity: identityVc,
                 employment: employmentResponseVc,
                 registration: registrationResponseVc,
-                accountNumber: `ACC-${Date.now()}`
+                accountNumber: `ACC-${Date.now()}`,
+                employeeName: identityClaims.employeeName,
+                submissionDate: new Date().toISOString()
             }
         });
 
@@ -828,44 +857,13 @@ async function checkBankAccountStatus() {
     }
 }
 
-async function initiateRentalAgreement(identityVc: any, employmentResponseVc: any, bankAccountResponseVc: any) {
-    try {
-        Logger.log('RENTAL_AGREEMENT_START', 'Initiating rental agreement');
-
-        const mikoKey = await mikoClient.keys.keyGenerate({
-            data: { type: 'ED25519' }
-        });
-
-        const rentalAgreementDecorator = mikoClient.createVcDecorator(RentalAgreement);
-        const rentalAgreementDraft = await rentalAgreementDecorator.create({
-            claims: {
-                identity: identityVc,
-                employment: employmentResponseVc,
-                bankAccount: bankAccountResponseVc,
-                startDate: "2024-06-01",
-                endDate: "2025-05-31",
-                propertyAddress: "Amsterdam, Netherlands"
-            }
-        });
-
-        const rentalAgreementVc = await rentalAgreementDraft.issue(mikoKey.id);
-
-        Logger.log('RENTAL_AGREEMENT_CREATED', 'Created rental agreement');
-
-        return rentalAgreementVc;
-    } catch (error) {
-        Logger.error('RENTAL_AGREEMENT_ERROR', 'Failed to initiate rental agreement', error);
-        throw error;
-    }
-}
-
-// Update the runFullJourney function to include the new steps
 async function runFullJourney() {
     try {
         Logger.log('FULL_JOURNEY_START', 'Starting Miko\'s complete journey');
 
-        // Step 1: Employment flow
-        await initiateMikoEmploymentRequest();
+        // Step 1: Identity and Employment
+        const identityVc = await initiateIdentityCredential();
+        const employmentVc = await initiateMikoEmploymentRequest();
         await handleEmploymentRequest();
         const employmentResponse = await handleEmploymentResponse();
         
@@ -875,23 +873,11 @@ async function runFullJourney() {
 
         Logger.log('EMPLOYMENT_COMPLETE', 'Employment process completed successfully');
 
-        // Create identity credential
-        const identityDecorator = mikoClient.createVcDecorator(ProofOfIdentity);
-        const identityKey = await mikoClient.keys.keyGenerate({ data: { type: 'ED25519' } });
-        const identityDraft = await identityDecorator.create({
-            claims: {
-                fullName: "Miko",
-                dateOfBirth: "1990-01-01",
-                nationality: "Non-EU",
-                documentNumber: "ID123456"
-            }
-        });
-        const identityVc = await identityDraft.issue(identityKey.id);
-
-        // Create proof of financial stability
+        // Step 2: Financial Stability and Birth Certificate
         const financialStabilityVc = await initiateProofOfFinancialStability();
+        const birthCertificateVc = await initiateBirthCertificate();
 
-        // Step 2: Visa application flow
+        // Step 3: Visa Process
         await initiateVisaApplication(employmentResponse, identityVc, financialStabilityVc);
         await handleVisaApplication();
         const visaResponse = await checkVisaStatus();
@@ -902,10 +888,7 @@ async function runFullJourney() {
 
         Logger.log('VISA_COMPLETE', 'Visa process completed successfully');
 
-        // Create birth certificate
-        const birthCertificateVc = await initiateBirthCertificate();
-
-        // Step 3: Municipality registration
+        // Step 4: Municipality Registration
         await initiateMunicipalityRegistration(identityVc, visaResponse, birthCertificateVc);
         await handleMunicipalityRegistration();
         const registrationResponse = await checkRegistrationStatus();
@@ -916,7 +899,7 @@ async function runFullJourney() {
 
         Logger.log('MUNICIPALITY_REGISTRATION_COMPLETE', 'Municipality registration completed successfully');
 
-        // Step 4: Bank account opening
+        // Step 5: Bank Account Opening
         await initiateBankAccountOpening(identityVc, employmentResponse, registrationResponse);
         await handleBankAccountOpening();
         const bankAccountResponse = await checkBankAccountStatus();
@@ -925,25 +908,19 @@ async function runFullJourney() {
             throw new Error('Bank account opening not completed');
         }
 
-        Logger.log('BANK_ACCOUNT_OPENED', 'Bank account opened successfully');
-
-        // Step 5: Rental agreement
-        const rentalAgreementVc = await initiateRentalAgreement(identityVc, employmentResponse, bankAccountResponse);
-
-        Logger.log('JOURNEY_COMPLETE', 'Full journey status', {
+        Logger.log('JOURNEY_COMPLETE', 'Full journey completed successfully', {
             employment: 'COMPLETED',
             visa: 'COMPLETED',
             municipalityRegistration: 'COMPLETED',
-            bankAccount: 'OPENED',
-            rentalAgreement: rentalAgreementVc ? 'SIGNED' : 'PENDING'
+            bankAccount: 'OPENED'
         });
 
         return {
+            identity: identityVc,
             employment: employmentResponse,
             visa: visaResponse,
             municipalityRegistration: registrationResponse,
-            bankAccount: bankAccountResponse,
-            rentalAgreement: rentalAgreementVc
+            bankAccount: bankAccountResponse
         };
 
     } catch (error) {
@@ -952,16 +929,8 @@ async function runFullJourney() {
     }
 }
 
-// Export everything needed for external use
 export {
-    //types
-    LinkedCredential,
-    //cleints
-    mikoClient,
-    employerClient,
-    bankClient,
-    municipalityClient,
-    
+    runFullJourney,
     // Types
     EmploymentContract,
     EmploymentContractResponse,
@@ -972,12 +941,9 @@ export {
     MunicipalityRegistrationResponse,
     BankAccountOpening,
     BankAccountOpeningResponse,
-    RentalAgreement,
     ProofOfFinancialStability,
     BirthCertificate,
-    
-    // Main functions
-    runFullJourney,
+    // Functions
     initiateMikoEmploymentRequest,
     handleEmploymentRequest,
     handleEmploymentResponse,
@@ -990,10 +956,8 @@ export {
     initiateBankAccountOpening,
     handleBankAccountOpening,
     checkBankAccountStatus,
-    initiateRentalAgreement,
     initiateProofOfFinancialStability,
     initiateBirthCertificate,
-    
     // Utilities
     Logger
 };
