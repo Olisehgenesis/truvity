@@ -1,0 +1,792 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Compliance Officer Panel</title>
+    <style>
+        .summary-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f8f8;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.summary-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.summary-content p {
+    margin: 0;
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.document-icons {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.document-icons span {
+    cursor: help;
+}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .requests-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .requests-table th,
+        .requests-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .requests-table th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-pending { background: #fff3dc; color: #996b00; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .button-view {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .button-approve {
+            background: #059669;
+            color: white;
+            margin-right: 8px;
+        }
+
+        .button-reject {
+            background: #dc2626;
+            color: white;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .document-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .document-item {
+            padding: 16px;
+            border-radius: 4px;
+            background: #f8f8f8;
+        }
+
+        .document-item h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
+        .alert-warning {
+            background: #fff3dc;
+            color: #996b00;
+            border: 1px solid #fcd34d;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .error-details {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .retry-button {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 2px solid #3b82f6;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #991b1b;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            display: none;
+            z-index: 1000;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="offlineBanner" class="offline-banner">
+        You are currently offline. Some features may be unavailable.
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Bank Compliance Officer Panel</h1>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search requests...">
+        </div>
+
+        <div id="alertBox" class="alert">
+            <div id="alertMessage"></div>
+            <div id="errorDetails" class="error-details"></div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Verification Requests</h2>
+                <div id="requestsLoading" class="loading">Loading requests...</div>
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th>Applicant</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Document Viewer</h2>
+                <div id="documentViewer">
+                    <div id="documentLoading" class="loading">Select a request to view details</div>
+                    <div id="documentContent" style="display: none;">
+                        <div class="document-status">
+                            <div class="document-item">
+                                <h3>Registration</h3>
+                                <span id="registrationStatus"></span>
+                            </div>
+                            <div class="document-item">
+                                <h3>Employment</h3>
+                                <span id="employmentStatus"></span>
+                            </div>
+                            <div class="document-item">
+                                <h3>Identity</h3>
+                                <span id="identityStatus"></span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button id="approveButton" class="button button-approve">Approve</button>
+                            <button id="rejectButton" class="button button-reject">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            currentRequest: null,
+            isLoading: false,
+            retryAttempts: 0,
+            maxRetries: 3,
+            lastSearch: '',
+            requestsCache: new Map(),
+            lastRefresh: null
+        };
+
+        // Utility functions
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function createStatusBadge(status) {
+            return `<span class="status-badge status-${status.toLowerCase()}">${status}</span>`;
+        }
+
+        function showAlert(message, type = 'error', details = '', duration = 5000) {
+            const alertBox = document.getElementById('alertBox');
+            const alertMessage = document.getElementById('alertMessage');
+            const errorDetails = document.getElementById('errorDetails');
+            
+            alertMessage.textContent = message;
+            errorDetails.textContent = details;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+
+            if (type !== 'error') {
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, duration);
+            } else {
+                const retryButton = document.createElement('button');
+                retryButton.className = 'retry-button';
+                retryButton.textContent = 'Retry';
+                retryButton.onclick = () => retryLastOperation();
+                errorDetails.appendChild(retryButton);
+            }
+        }
+
+        async function retryLastOperation() {
+            if (state.retryAttempts >= state.maxRetries) {
+                showAlert(
+                    'Maximum retry attempts reached',
+                    'error',
+                    'Please refresh the page or try again later'
+                );
+                return;
+            }
+
+            state.retryAttempts++;
+            await fetchRequests(state.lastSearch);
+        }
+
+        function handleNetworkStatus() {
+            const offlineBanner = document.getElementById('offlineBanner');
+            if (!navigator.onLine) {
+                offlineBanner.style.display = 'block';
+                showAlert(
+                    'You are offline',
+                    'warning',
+                    'Some features may be unavailable until connection is restored'
+                );
+            } else {
+                offlineBanner.style.display = 'none';
+                showAlert('Connection restored', 'success', '', 3000);
+                if (state.lastRefresh && Date.now() - state.lastRefresh > 300000) {
+                    fetchRequests(state.lastSearch);
+                }
+            }
+        }
+
+        function validateDocumentData(document) {
+            const requiredFields = ['id', 'applicantName', 'submissionDate'];
+            const missingFields = requiredFields.filter(field => !document[field]);
+            
+            if (missingFields.length > 0) {
+                throw new Error(`Invalid document data: Missing required fields: ${missingFields.join(', ')}`);
+            }
+        }
+
+        function displayRequests(response) {
+    const tbody = document.getElementById('requestsTableBody');
+    document.getElementById('requestsLoading').style.display = 'none';
+
+    if (!response || !response.requests || response.requests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    No verification requests found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = response.requests.map(request => `
+        <tr>
+            <td>
+                ${request.applicantName}
+                ${getDocumentStatusIcons(request.linkedDocuments)}
+            </td>
+            <td>${createStatusBadge(request.status)}</td>
+            <td>${formatDate(request.submissionDate)}</td>
+            <td>
+                <button 
+                    class="button button-view" 
+                    onclick="fetchDocumentDetails('${request.id}')"
+                    ${request.status !== 'PENDING' ? 'disabled' : ''}
+                    title="${getButtonTooltip(request)}"
+                >
+                    View
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    // Add summary if available
+    if (response.summary) {
+        const summaryHtml = `
+            <div class="summary-section">
+                <h3>Summary</h3>
+                <div class="summary-content">
+                    <p>Total Requests: ${response.summary.total}</p>
+                    <p>Pending: ${response.summary.byStatus.pending}</p>
+                    <p>Approved: ${response.summary.byStatus.approved}</p>
+                    <p>Rejected: ${response.summary.byStatus.rejected}</p>
+                    <p>Complete Documents: ${response.summary.withLinkedDocs}</p>
+                </div>
+            </div>
+        `;
+        tbody.insertAdjacentHTML('afterend', summaryHtml);
+    }
+}
+
+function getDocumentStatusIcons(linkedDocs) {
+    if (!linkedDocs) return '';
+    
+    return `
+        <div class="document-icons">
+            ${linkedDocs.hasIdentity ? 
+                '<span title="Identity Verified">👤</span>' : 
+                '<span title="Identity Missing" style="opacity: 0.3">👤</span>'}
+            ${linkedDocs.hasEmployment ? 
+                '<span title="Employment Verified">💼</span>' : 
+                '<span title="Employment Missing" style="opacity: 0.3">💼</span>'}
+            ${linkedDocs.hasRegistration ? 
+                '<span title="Registration Verified">📄</span>' : 
+                '<span title="Registration Missing" style="opacity: 0.3">📄</span>'}
+        </div>
+    `;
+}
+
+function getButtonTooltip(request) {
+    if (request.status !== 'PENDING') {
+        return `Request is ${request.status.toLowerCase()}`;
+    }
+    
+    const missingDocs = [];
+    if (!request.linkedDocuments?.hasIdentity) missingDocs.push('Identity');
+    if (!request.linkedDocuments?.hasEmployment) missingDocs.push('Employment');
+    if (!request.linkedDocuments?.hasRegistration) missingDocs.push('Registration');
+    
+    return missingDocs.length > 0 ? 
+        `Missing documents: ${missingDocs.join(', ')}` : 
+        'All documents verified';
+}
+function getApplicantName(request) {
+    try {
+        // Check direct applicant name first
+        if (request.claims?.applicantName && request.claims.applicantName !== 'Unknown') {
+            return request.claims.applicantName;
+        }
+
+        // Check in linked documents
+        const linkedDocs = request.data?.linkedDocentials || [];
+        for (const docId of linkedDocs) {
+            const doc = request.linkedDocuments?.[docId];
+            if (!doc) continue;
+
+            // Try various name fields that might exist in linked documents
+            const possibleNames = [
+                doc.claims?.fullName,
+                doc.claims?.employeeName,
+                doc.claims?.applicantName,
+                doc.claims?.name,
+                doc.claims?.firstName && doc.claims?.lastName ? 
+                    `${doc.claims.firstName} ${doc.claims.lastName}` : null
+            ];
+
+            // Return first valid name found
+            const validName = possibleNames.find(name => 
+                name && name !== 'Unknown' && name.trim() !== ''
+            );
+            if (validName) return validName;
+        }
+
+        // If no name found in linked docs, try direct document claims
+        const possibleDirectNames = [
+            request.claims?.fullName,
+            request.claims?.employeeName,
+            request.claims?.name,
+            request.claims?.firstName && request.claims?.lastName ? 
+                `${request.claims.firstName} ${request.claims.lastName}` : null
+        ];
+
+        const validDirectName = possibleDirectNames.find(name => 
+            name && name !== 'Unknown' && name.trim() !== ''
+        );
+        if (validDirectName) return validDirectName;
+
+        // If still no name found, return null to filter out this request
+        return null;
+
+    } catch (error) {
+        console.warn('Error getting applicant name:', error);
+        return null; // Return null to filter out this request
+    }
+}
+
+function displayDocumentDetails(document) {
+    try {
+        state.currentRequest = document;
+        document.getElementById('documentContent').style.display = 'block';
+        console.log('Displaying document details:', document);
+
+        // Get applicant name from any available source
+        const applicantName = getApplicantName(document) || 'Unknown Applicant';
+
+        // Add applicant name to the top of the document viewer
+        document.getElementById('documentContent').insertAdjacentHTML('afterbegin', `
+            <div class="applicant-header" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                <h3 style="margin: 0;">Applicant: ${applicantName}</h3>
+                <div style="color: #666; font-size: 14px;">
+                    Submission Date: ${formatDate(document.submissionDate)}
+                </div>
+            </div>
+        `);
+
+        // Update document statuses
+        document.getElementById('registrationStatus').innerHTML = createDocumentStatusDisplay(
+            document.linkedDocuments?.hasRegistration,
+            document.details?.registration
+        );
+
+        document.getElementById('employmentStatus').innerHTML = createDocumentStatusDisplay(
+            document.linkedDocuments?.hasEmployment,
+            document.details?.employment
+        );
+
+        document.getElementById('identityStatus').innerHTML = createDocumentStatusDisplay(
+            document.linkedDocuments?.hasIdentity,
+            document.details?.identity
+        );
+
+        // Update approve button state
+        const approveButton = document.getElementById('approveButton');
+        const canApprove = document.linkedDocuments?.hasIdentity && 
+                          document.linkedDocuments?.hasEmployment && 
+                          document.linkedDocuments?.hasRegistration;
+        
+        approveButton.disabled = !canApprove;
+        approveButton.title = canApprove ? 
+            'Approve verification request' : 
+            'All required documents must be verified';
+
+        // Set up button handlers
+        approveButton.onclick = () => handleVerification(document.id, true);
+        document.getElementById('rejectButton').onclick = () => handleVerification(document.id, false);
+
+    } catch (error) {
+        console.error('Error displaying document details:', error);
+        showAlert(
+            'Error displaying document details',
+            'error',
+            'There was an error displaying the document details. Some information may be missing.'
+        );
+    }
+}
+        function displayDocumentDetails(document) {
+            state.currentRequest = document;
+            document.getElementById('documentContent').style.display = 'block';
+
+            document.getElementById('registrationStatus').innerHTML = document.proofOfRegistration
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            document.getElementById('employmentStatus').innerHTML = document.employmentContract
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            document.getElementById('identityStatus').innerHTML = document.identity
+                ? '<span class="status-badge status-approved">✓ Verified</span>'
+                : '<span class="status-badge status-rejected">✗ Missing</span>';
+
+            const approveButton = document.getElementById('approveButton');
+            approveButton.disabled = !(document.proofOfRegistration && 
+                                    document.employmentContract && 
+                                    document.identity);
+
+            if (approveButton.disabled) {
+                approveButton.title = 'All required documents must be verified';
+            }
+
+            approveButton.onclick = () => handleVerification(document.id, true);
+            document.getElementById('rejectButton').onclick = () => handleVerification(document.id, false);
+        }
+
+        async function fetchRequests(search = '', forceRefresh = false) {
+            try {
+                state.isLoading = true;
+                state.lastSearch = search;
+                document.getElementById('requestsLoading').style.display = 'block';
+
+                const cacheKey = `requests-${search}`;
+                if (!forceRefresh && state.requestsCache.has(cacheKey)) {
+                    const cachedData = state.requestsCache.get(cacheKey);
+                    if (Date.now() - cachedData.timestamp < 60000) {
+                        displayRequests(cachedData.data);
+                        return;
+                    }
+                }
+
+                const searchParams = new URLSearchParams({
+                    search: search,
+                    applicantName: search
+                });
+                
+                const response = await fetch(`/api/verifications?${searchParams}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to fetch requests: ${errorText}`);
+                }
+
+                const requests = await response.json();
+                state.requestsCache.set(cacheKey, {
+                    data: requests,
+                    timestamp: Date.now()
+                });
+                state.lastRefresh = Date.now();
+                state.retryAttempts = 0;
+                displayRequests(requests);
+
+            } catch (error) {
+                showAlert(
+                    'Failed to load verification requests',
+                    'error',
+                    `Error: ${error.message}. Retry attempt ${state.retryAttempts + 1} of ${state.maxRetries}`
+                );
+            } finally {
+                state.isLoading = false;
+                document.getElementById('requestsLoading').style.display = 'none';
+            }
+        }
+
+        async function fetchDocumentDetails(requestId) {
+            try {
+                state.isLoading = true;
+                document.getElementById('documentLoading').style.display = 'block';
+                document.getElementById('documentContent').style.display = 'none';
+
+                const response = await fetch(`/api/verifications/${requestId}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to fetch document details: ${errorText}`);
+                }
+
+                const document = await response.json();
+                validateDocumentData(document);
+                displayDocumentDetails(document);
+
+            } catch (error) {
+                showAlert(
+                    'Failed to load document details',
+                    'error',
+                    `Error: ${error.message}`
+                );
+            } finally {
+                state.isLoading = false;
+                document.getElementById('documentLoading').style.display = 'none';
+            }
+        }
+
+        async function handleVerification(requestId, approved) {
+            if (state.isLoading) return;
+
+            try {
+                state.isLoading = true;
+                const actionButton = approved ? 
+                    document.getElementById('approveButton') : 
+                    document.getElementById('rejectButton');
+                
+                actionButton.disabled = true;
+                actionButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
+
+                const endpoint = approved ? 'approve' : 'reject';
+                const response = await fetch(`/api/verifications/${requestId}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reviewerId: 'COMPLIANCE-OFFICER-001',
+                        comments: approved ? 'Approved by compliance officer' : 'Rejected by compliance officer'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Verification failed: ${errorText}`);
+                }
+
+                showAlert(
+                    `Request ${approved ? 'approved' : 'rejected'} successfully`,
+                    'success'
+                );
+
+                state.requestsCache.clear();
+                await fetchRequests(state.lastSearch, true);
+                resetDocumentViewer();
+
+            } catch (error) {
+                showAlert(
+                    'Failed to process verification',
+                    'error',
+                    `Error: ${error.message}`
+                );
+            } finally {
+                state.isLoading = false;
+                resetButtons();
+            }
+        }
+
+        function resetDocumentViewer() {
+            document.getElementById('documentContent').style.display = 'none';
+            document.getElementById('documentLoading').style.display = 'block';
+            document.getElementById('documentLoading').textContent = 'Select a request to view details';
+        }
+
+        function resetButtons() {
+            const approveButton = document.getElementById('approveButton');
+            const rejectButton = document.getElementById('rejectButton');
+            
+            approveButton.disabled = false;
+            rejectButton.disabled = false;
+            approveButton.textContent = 'Approve';
+            rejectButton.textContent = 'Reject';
+        }
+
+        // Event listeners
+        window.addEventListener('online', handleNetworkStatus);
+        window.addEventListener('offline', handleNetworkStatus);
+
+        const searchInput = document.getElementById('searchInput');
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                fetchRequests(e.target.value);
+            }, 300);
+        });
+
+        // Initialize
+        handleNetworkStatus();
+        fetchRequests();
+    </script>
+</body>
+</html>
