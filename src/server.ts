@@ -25,56 +25,16 @@ app.get('/', (req, res) => {
 // Search endpoint
 app.get('/api/verifications', async (req, res) => {
     try {
-        const { search, status } = req.query;
-        const requests = await panel.searchVerificationRequests({
-            applicantName: search?.toString(),
-            status: status?.toString()
+        
+        const results = await panel.searchVerificationRequests({
+            employeeName: req.query.search as string,
+            status: req.query.status as string
         });
-
-        // Ensure requests is always an array
-        const requestsArray = Array.isArray(requests) ? requests : [];
-
-        // Create summary from the requests
-        const summary = {
-            total: requestsArray.length,
-            byStatus: {
-                pending: requestsArray.filter(r => r?.status === 'PENDING').length,
-                approved: requestsArray.filter(r => r?.status === 'APPROVED').length,
-                rejected: requestsArray.filter(r => r?.status === 'REJECTED').length
-            },
-            withLinkedDocs: requestsArray.filter(r => 
-                r?.linkedDocuments?.hasIdentity && 
-                r?.linkedDocuments?.hasEmployment && 
-                r?.linkedDocuments?.hasRegistration
-            ).length
-        };
-
-        // Format the requests for the frontend
-        const formattedRequests = requestsArray.map(request => ({
-            id: request?.id,
-            applicantName: request?.applicantName || 'Unknown',
-            status: request?.status || 'PENDING',
-            submissionDate: request?.submissionDate || new Date().toISOString(),
-            linkedDocuments: {
-                hasIdentity: !!request?.linkedDocuments?.hasIdentity,
-                hasEmployment: !!request?.linkedDocuments?.hasEmployment,
-                hasRegistration: !!request?.linkedDocuments?.hasRegistration
-            }
-        }));
-
-        res.json({
-            requests: formattedRequests,
-            summary
-        });
+        res.json(results);
     } catch (error) {
-        Logger.error('API_ERROR', 'Failed to fetch verification requests', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch verification requests',
-            details: error 
-        });
+        res.status(500).json({ error: error });
     }
 });
-
 // Add type definitions for better error handling
 interface VerificationRequest {
     id: string;

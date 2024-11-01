@@ -7,7 +7,7 @@ import { TruvityClient, LinkedCredential, VcContext, VcClaim, VcNotEmptyClaim } 
 })
 class BankVerificationRequest {
     @VcNotEmptyClaim
-    applicantName!: string;
+    employeeName!: string;
 
     @VcNotEmptyClaim
     verificationId!: string;
@@ -149,6 +149,11 @@ class Logger {
     }
 }
 
+@VcContext({
+    name: 'BankVerificationRequest',
+    namespace: 'urn:dif:hackathon/vocab/banking'
+})
+
 export class ComplianceOfficerPanel {
     private bankClient: TruvityClient;
     private verificationRequestDecorator: any;
@@ -173,6 +178,15 @@ export class ComplianceOfficerPanel {
         }
     }
 
+    private async getEmployeeNameFromDocument(doc: any): Promise<string | null> {
+        try {
+            const claims = await doc.getClaims();
+            return claims.employeeName || null;
+        } catch {
+            return null;
+        }
+    }
+
     private async findLinkedDocument(request: any, type: string): Promise<any> {
         try {
             const linkedCreds = request.data?.linkedCredentials || [];
@@ -191,14 +205,14 @@ export class ComplianceOfficerPanel {
     }
 
     public async searchVerificationRequests(searchParams?: {
-        applicantName?: string,
-        status?: string
+        status?: string,
+        employeeName?: string
     }) {
         try {
             Logger.log('BANK_SEARCH_START', 'Starting verification request search', searchParams);
-    
-            // First search by namespace to get banking documents
-            const bankingFilter: SearchFilter[] = [{
+
+            // Base filter for banking namespace
+            const filters: SearchFilter[] = [{
                 data: {
                     namespace: {
                         operator: 'EQUALS',
@@ -206,41 +220,69 @@ export class ComplianceOfficerPanel {
                     }
                 }
             }];
-    
-            Logger.log('BANK_SEARCH_NAMESPACE', 'Searching banking namespace');
-            
+
+            // Add name filter if provided
+            if (searchParams?.employeeName) {
+                filters.push({
+                    data: {
+                        claims: {
+                            employeeName: {
+                                operator: 'CONTAINS',
+                                value: searchParams.employeeName
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Add status filter if provided
+            if (searchParams?.status) {
+                filters.push({
+                    data: {
+                        claims: {
+                            status: {
+                                operator: 'EQUALS',
+                                value: searchParams.status
+                            }
+                        }
+                    }
+                });
+            }
+
             const bankingResults = await this.bankClient.credentials.credentialSearch({
-                filter: bankingFilter as unknown as []
+                filter: filters as unknown as []
             }) as unknown as SearchResults;
-    
-            Logger.log('BANK_DOCUMENTS_FOUND', 'Banking documents found', {
-                totalBankingDocs: bankingResults.items.length
-            });
-    
-            // Process each banking document to get linked identity info
+
+            Logger.log('BANK_DOCUMENTS_FOUND', `Found ${bankingResults.items.length} matching documents`);
+
+            // Process and enrich each result
             const enrichedResults = await Promise.all(bankingResults.items.map(async (doc) => {
                 try {
-                    // Get linked identity document
+                    // Get linked documents
                     const identityDoc = await this.findLinkedDocument(doc, 'ProofOfIdentity');
-                    
-                    // Get claims from identity document
-                    let applicantName = 'Unknown';
-                    if (identityDoc) {
-                        const claims = await identityDoc.getClaims();
-                        applicantName = claims.fullName || 'Unknown';
-                    }
-    
+                    const employmentDoc = await this.findLinkedDocument(doc, 'EmploymentContract');
+                    const registrationDoc = await this.findLinkedDocument(doc, 'MunicipalityRegistration');
+
+                    // Get employee name from various possible sources
+                    const names = await Promise.all([
+                        this.getEmployeeNameFromDocument(doc),
+                        identityDoc ? this.getEmployeeNameFromDocument(identityDoc) : null,
+                        employmentDoc ? this.getEmployeeNameFromDocument(employmentDoc) : null
+                    ]);
+
+                    // Use the first available name
+                    const employeeName = names.find(name => name !== null) || 'Unknown';
+
                     return {
                         id: doc.id,
                         type: doc.data.type,
-                        // namespace: doc.data.namespace,
                         submissionDate: doc.data.validFrom || doc.data.issuanceDate,
                         status: doc.data.claims?.status || 'PENDING',
-                        applicantName,
+                        employeeName,
                         linkedDocuments: {
                             hasIdentity: !!identityDoc,
-                            hasEmployment: await this.findLinkedDocument(doc, 'EmploymentContract').then(Boolean),
-                            hasRegistration: await this.findLinkedDocument(doc, 'MunicipalityRegistration').then(Boolean)
+                            hasEmployment: !!employmentDoc,
+                            hasRegistration: !!registrationDoc
                         }
                     };
                 } catch (error) {
@@ -248,51 +290,31 @@ export class ComplianceOfficerPanel {
                     return null;
                 }
             }));
-    
-            // Filter out failed enrichments
+
             const validResults = enrichedResults.filter(Boolean);
-    
-            // Apply applicant name filter if provided
-            let filteredResults = validResults;
-            if (searchParams?.applicantName) {
-                Logger.log('BANK_NAME_FILTER', `Filtering by name: ${searchParams.applicantName}`);
-                filteredResults = validResults.filter(result => 
-                    result && result.applicantName.toLowerCase().includes(searchParams?.applicantName?.toLowerCase() ?? '')
-                );
-            }
-    
-            // Apply status filter if provided
-            if (searchParams?.status) {
-                Logger.log('BANK_STATUS_FILTER', `Filtering by status: ${searchParams.status}`);
-                filteredResults = filteredResults.filter(result => 
-                    result && result.status === searchParams.status
-                );
-            }
-    
-            // Log detailed breakdown
+
             Logger.log('BANK_SEARCH_RESULTS', 'Search results breakdown', {
                 totalDocuments: bankingResults.items.length,
                 enrichedDocuments: validResults.length,
-                filteredDocuments: filteredResults.length,
-                byStatus: filteredResults.reduce((acc, doc) => {
+                byStatus: validResults.reduce((acc, doc) => {
                     if (doc) {
                         acc[doc.status] = (acc[doc.status] || 0) + 1;
                     }
                     return acc;
                 }, {} as Record<string, number>),
                 withLinkedDocs: {
-                    withIdentity: filteredResults.filter(r =>r && r.linkedDocuments.hasIdentity).length,
-                    withEmployment: filteredResults.filter(r => r && r.linkedDocuments.hasEmployment).length,
-                    withRegistration: filteredResults.filter(r =>r && r.linkedDocuments.hasRegistration).length,
-                    complete: filteredResults.filter(r => r &&
+                    withIdentity: validResults.filter(r => r?.linkedDocuments.hasIdentity).length,
+                    withEmployment: validResults.filter(r => r?.linkedDocuments.hasEmployment).length,
+                    withRegistration: validResults.filter(r => r?.linkedDocuments.hasRegistration).length,
+                    complete: validResults.filter(r => r &&
                         r.linkedDocuments.hasIdentity && 
                         r.linkedDocuments.hasEmployment && 
                         r.linkedDocuments.hasRegistration
                     ).length
                 }
             });
-    
-            return filteredResults;
+
+            return validResults;
         } catch (error) {
             Logger.error('BANK_SEARCH_ERROR', 'Failed to search verification requests', error);
             throw error;
