@@ -88,8 +88,8 @@ curl -fsSL https://get.jetify.com/devbox | bash
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd <project-directory>
+git clone https://github.com/Olisehgenesis/truvity.git
+cd truvity
 ```
 
 2. Start DevBox shell:
