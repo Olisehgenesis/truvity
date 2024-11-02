@@ -25,13 +25,14 @@ app.get('/', (req, res) => {
 // Search endpoint
 app.get('/api/verifications', async (req, res) => {
     try {
-        
         const results = await panel.searchVerificationRequests({
             employeeName: req.query.search as string,
             status: req.query.status as string
         });
-        res.json(results);
+        console.log("Backend sending:", results.requests); // Add this line
+        res.json(results.requests);
     } catch (error) {
+        console.error("Backend error:", error);
         res.status(500).json({ error: error });
     }
 });
@@ -79,7 +80,14 @@ app.get('/api/verifications/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch verification details' });
     }
 });
-
+app.post('/api/verifications/:id/verify', async (req, res) => {
+    try {
+        const verification = await panel.verifyDocumentLinks(req.params.id);
+        res.json(verification);
+    } catch (error) {
+        res.status(500).json({ error: 'Verification failed' });
+    }
+});
 // Approval endpoint
 app.post('/api/verifications/:id/approve', async (req, res) => {
     try {
