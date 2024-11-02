@@ -1,72 +1,231 @@
-# DIF Hackathon 2024 Demo
+# DIF Hackathon 2024 - Miko's Journey & Bank Compliance Panel
 
-<!-- TOC -->
-* [DIF Hackathon 2024 Demo](#dif-hackathon-2024-demo)
-  * [Points of Interest](#points-of-interest)
-  * [Prerequisites](#prerequisites)
-    * [API Keys](#api-keys)
-    * [Development Environment](#development-environment)
-    * [Application Dependencies](#application-dependencies)
-  * [How to Run](#how-to-run)
-<!-- TOC -->
+This project implements both Challenge 1 (Miko's Journey) and Challenge 2 (Bank Compliance Officer Panel) of the Truvity DIF Hackathon 2024, demonstrating a complete end-to-end implementation of verifiable credentials for expat document management.
 
-## Points of Interest
+## Project Overview
 
-- [The demo app source code](src/dif-workshop.ts)
-- [DIF workshop recording](https://us02web.zoom.us/rec/play/8dvcyIxCuCQTtM9kBhc3OW_xtss1wKIgxVVI1oMKz0DPHboBxoRaXEFg727wGeEucYgyttXb-E_JXrSs.upTtHtss3RZMzXVK). Demo presentation starts at `00:33:35`
-- [Truvity's DIF Hackathon Discord channel](https://discord.com/channels/1157618771645698068/1286835814948671550)
-- [Documentation](https://docs.truvity.cloud/sdk)
+### Challenge 1: Miko's Journey
+Implements a digital wallet with an integrated to-do list guiding Miko through the process of:
+- Obtaining Employment Contract
+- Visa Application
+- Municipality Registration
+- Bank Account Opening
+- Housing Contract Completion
+
+### Challenge 2: Bank Compliance Panel
+Web-based compliance officer interface for:
+- Verification request management
+- Document validation
+- Credential approval/rejection
+- Bank account issuance
+
+## Technical Implementation
+
+### Core Components
+
+1. **Digital Wallet & Todo List**
+   - Document collection workflow
+   - Credential linking
+   - Status tracking
+   - Automated guidance
+
+2. **ComplianceOfficerPanel**
+   - Document verification
+   - Approval workflow
+   - Bank account creation
+   - Status management
+
+3. **Web Interface**
+   - Modern responsive design
+   - Real-time updates
+   - Interactive verification
 
 ## Prerequisites
 
-### API Keys
-
-To run the demo application, you'll need two API keys from different Truvity accounts.
-
-Register new accounts at https://signup.truvity.cloud/dif-hackathon-2024.
-
-Learn how to create a new API key [here](https://docs.truvity.cloud/overview/security/create-api-keys).
-
-Once you've obtained two API keys, please fill in their values in `devbox.json`, replacing the existing `<API_KEY_X>` placeholders
-
-```diff
-diff --git a/devbox.json b/devbox.json
-index 1c06ae6..1ddbad9 100644
---- a/devbox.json
-+++ b/devbox.json
-@@ -6,7 +6,7 @@
-   ],
-   "env": {
-     "DEVBOX_COREPACK_ENABLED": "true",
--    "TIM_API_KEY": "<API_KEY_1>",
--    "AIRLINE_API_KEY": "<API_KEY_2>"
-+    "TIM_API_KEY": "PFgto...",
-+    "AIRLINE_API_KEY": "ZBZ3b..."
-   }
- }
-
-```
-
 ### Development Environment
 
-This repository uses DevBox to set up the local environment. You can find instructions on how to install it [here](https://www.jetify.com/devbox/docs/installing_devbox/#install-devbox).
+1. Install DevBox:
+```bash
+# On macOS
+brew install jetify/devbox/devbox
 
-Once DevBox is installed, run `devbox shell` to start a new shell with the necessary packages and tools.
+# On Linux
+curl -fsSL https://get.jetify.com/devbox | bash
+```
 
-Alternatively, you can [configure `direnv`](https://direnv.net/#basic-installation), which will automatically set up the environment.
+2. Create `devbox.json`:
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.3/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@20.10",
+    "yarn-berry@4.3.1"
+  ],
+  "env": {
+    "DEVBOX_COREPACK_ENABLED": "true",
+    "MIKO_API_KEY": "<your-miko-api-key>",
+    "EMPLOYER_API_KEY": "<your-employer-api-key>",
+    "BANK_API_KEY": "<your-bank-api-key>",
+    "MUNICPALITY_API_KEY": "<your-municipality-api-key>",
+    "BANK_COMPLIANCE_API_KEY": "<your-compliance-api-key>"
+  }
+}
+```
 
-### Application Dependencies
+### API Keys
 
-After setting up the [development environment](#development-environment), install application dependencies with the following command:
+1. Visit https://signup.truvity.cloud/dif-hackathon-2024
+2. Create 5 separate accounts:
+   - Miko (User)
+   - Employer
+   - Bank
+   - Municipality
+   - Bank Compliance Officer
+3. Generate API keys for each account
+4. Add keys to devbox.json
 
-```shell
+## Project Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
+
+2. Start DevBox shell:
+```bash
+devbox shell
+```
+
+3. Install dependencies:
+```bash
 yarn install
 ```
 
-## How to Run
+## Running the Challenges
 
-To launch the application, run the following command in your terminal:
-
-```shell
-yarn start
+### Challenge 1: Miko's Journey
+```bash
+yarn miko
 ```
+
+This simulates Miko's document collection journey:
+1. Employment Contract acquisition
+2. Visa application process
+3. Municipality registration
+4. Bank account setup
+5. Housing contract completion
+
+### Challenge 2: Compliance Officer Panel
+```bash
+yarn server
+```
+
+Access the panel at `http://localhost:3000`
+
+Features:
+- Document verification
+- Credential approval/rejection
+- Bank account issuance
+- Status tracking
+
+## Project Structure
+```
+├── src/
+│   ├── challenge1/
+│   │   ├── miko-wallet.ts
+│   │   └── todo-list.ts
+│   ├── challenge2/
+│   │   ├── compliance-officer-panel.ts
+│   │   └── server.ts
+│   ├── shared/
+│   └── public/
+├── tests/
+├── devbox.json
+└── README.md
+```
+
+## Development
+
+### Available Commands
+```bash
+# Start development environment
+devbox shell
+
+# Install dependencies
+yarn install
+
+# Run Challenge 1
+yarn miko
+
+# Run Challenge 2
+yarn server
+
+# Run tests
+yarn test
+
+# Build project
+yarn build
+```
+
+### Troubleshooting
+
+Common Issues:
+1. API Key Issues
+   - Verify keys in devbox.json
+   - Check account permissions
+   - Ensure keys are active
+
+2. Server Issues
+   - Check port 3000 availability
+   - Verify Node.js version
+   - Check logs for errors
+
+3. Credential Linking
+   - Verify document order
+   - Check credential formats
+   - Review linking process
+
+## Documentation
+
+- [Truvity SDK Documentation](https://docs.truvity.cloud/sdk)
+- [DIF Hackathon Discord](https://discord.com/channels/1157618771645698068/1286835814948671550)
+- [Challenge Description](https://hackathon.identity.foundation/challenges/truvity)
+
+## Features
+
+### Challenge 1
+- ✅ Digital wallet implementation
+- ✅ Automated to-do list
+- ✅ Document collection workflow
+- ✅ Credential linking
+- ✅ Status tracking
+
+### Challenge 2
+- ✅ Web-based compliance panel
+- ✅ Document verification
+- ✅ Approval workflow
+- ✅ Bank account issuance
+- ✅ Status management
+- ✅ Search functionality
+- ✅ Real-time updates
+
+## Security Notes
+
+- Never commit API keys to version control
+- Keep devbox.json in .gitignore
+- Use environment variables for sensitive data
+- Regularly rotate API keys
+- Follow security best practices
+
+## License
+
+MIT
+
+## Support
+
+For support:
+- Join [DIF Hackathon Discord](https://discord.com/channels/1157618771645698068/1286835814948671550)
+- Check [Truvity Documentation](https://docs.truvity.cloud/sdk)
+- Open issues in the repository
+
